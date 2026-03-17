@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050505;
+  --foreground: #FAFAFA;
+  --surface: #141414;
+  --surface-alt: #1C1C1C;
+  --border: #2A2A2A;
+  --text-secondary: #A0A0A0;
+  --text-muted: #666666;
+  --accent-red: #C93B32;
+  --accent-orange: #F8863A;
+  --accent-green: #6A8E50;
+  --accent-blue: #3B7FCC;
+  --gradient-bar: linear-gradient(90deg, #33090F 0%, #C93B32 13%, #F8863A 25%, #C8D47A 38%, #6A8E50 50%, #002211 62%, #001A3D 74%, #3B7FCC 86%, #99CCFF 97%);
+  --gradient-text: linear-gradient(90deg, #D4907A 0%, #E8B87A 35%, #CDD48A 65%, #8AAE6A 100%);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent-red: var(--accent-red);
+  --color-accent-orange: var(--accent-orange);
+  --color-accent-green: var(--accent-green);
+  --color-accent-blue: var(--accent-blue);
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-cormorant);
+  --font-mono: var(--font-jetbrains);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-outfit), sans-serif;
+}
+
+.gradient-bar {
+  background: var(--gradient-bar);
+  height: 3px;
+}
+
+.gradient-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-mark {
+  font-family: var(--font-jetbrains), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+.brand-mark .brackets {
+  color: var(--text-muted);
 }
