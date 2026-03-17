@@ -80,7 +80,6 @@ export default function Home() {
   const [quizKey, setQuizKey] = useState(0);
 
   const shuffledQuestions: ShuffledQuestion[] = useMemo(() => {
-    if (phase !== "quiz") return [];
     return shuffle(questions).map((q) => {
       const shuffledChoices = shuffle(q.choices).map((c, i) => ({
         label: String.fromCharCode(65 + i),
@@ -90,7 +89,7 @@ export default function Home() {
       return { ...q, shuffledChoices };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, quizKey]);
+  }, [quizKey]);
 
   const currentQuestion = shuffledQuestions[currentIndex];
 
