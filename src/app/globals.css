@@ -14,6 +14,25 @@
   --accent-blue: #3B7FCC;
   --gradient-bar: linear-gradient(90deg, #33090F 0%, #C93B32 13%, #F8863A 25%, #C8D47A 38%, #6A8E50 50%, #002211 62%, #001A3D 74%, #3B7FCC 86%, #99CCFF 97%);
   --gradient-text: linear-gradient(90deg, #D4907A 0%, #E8B87A 35%, #CDD48A 65%, #8AAE6A 100%);
+  --correct-bg: rgba(106, 142, 80, 0.08);
+  --incorrect-bg: rgba(201, 59, 50, 0.08);
+  --correct-bg-soft: rgba(106, 142, 80, 0.06);
+  --incorrect-bg-soft: rgba(201, 59, 50, 0.06);
+}
+
+:root.light {
+  --background: #FAFAFA;
+  --foreground: #0A0A0A;
+  --surface: #FFFFFF;
+  --surface-alt: #F4F4F5;
+  --border: #DBDBDB;
+  --text-secondary: #545454;
+  --text-muted: #888888;
+  --gradient-text: linear-gradient(90deg, #A3522E 0%, #B8782A 35%, #6A7A20 65%, #3A6E28 100%);
+  --correct-bg: rgba(106, 142, 80, 0.12);
+  --incorrect-bg: rgba(201, 59, 50, 0.12);
+  --correct-bg-soft: rgba(106, 142, 80, 0.08);
+  --incorrect-bg-soft: rgba(201, 59, 50, 0.08);
 }
 
 @theme inline {

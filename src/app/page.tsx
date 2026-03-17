@@ -1,7 +1,57 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { questions, Question } from "@/data/questions";
+
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored === "light") {
+      setIsDark(false);
+      document.documentElement.classList.add("light");
+    }
+  }, []);
+
+  const toggle = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.remove("light");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.add("light");
+      localStorage.setItem("theme", "light");
+    }
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-surface-alt transition-colors cursor-pointer"
+      aria-label="Toggle theme"
+    >
+      {isDark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 function shuffle<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -86,6 +136,9 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="gradient-bar" />
+        <div className="absolute top-5 right-6">
+          <ThemeToggle />
+        </div>
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="max-w-2xl w-full text-center">
             <div className="brand-mark mb-8">
@@ -189,6 +242,9 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="gradient-bar" />
+        <div className="absolute top-5 right-6">
+          <ThemeToggle />
+        </div>
         <div className="flex-1 flex items-center justify-center px-6 py-12">
           <div className="max-w-2xl w-full text-center">
             <div className="brand-mark mb-8">
@@ -313,6 +369,7 @@ export default function Home() {
           <span className="text-text-muted text-sm font-mono">
             {currentIndex + 1}/{shuffledQuestions.length}
           </span>
+          <ThemeToggle />
         </div>
       </header>
 
@@ -361,11 +418,11 @@ export default function Home() {
             if (isAnswered) {
               if (isThisCorrect) {
                 borderColor = "var(--accent-green)";
-                bgColor = "rgba(106, 142, 80, 0.08)";
+                bgColor = "var(--correct-bg)";
                 labelBg = "var(--accent-green)";
               } else if (isSelected && !isThisCorrect) {
                 borderColor = "var(--accent-red)";
-                bgColor = "rgba(201, 59, 50, 0.08)";
+                bgColor = "var(--incorrect-bg)";
                 labelBg = "var(--accent-red)";
               }
             }
@@ -410,8 +467,8 @@ export default function Home() {
                 ? "var(--accent-green)"
                 : "var(--accent-red)",
               backgroundColor: isCorrect
-                ? "rgba(106, 142, 80, 0.06)"
-                : "rgba(201, 59, 50, 0.06)",
+                ? "var(--correct-bg-soft)"
+                : "var(--incorrect-bg-soft)",
             }}
           >
             <div className="flex items-center gap-2 mb-3">
