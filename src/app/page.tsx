@@ -364,6 +364,29 @@ export default function Home() {
   const isAnswered = userAnswer !== undefined;
   const isCorrect = userAnswer === currentQuestion.correctAnswer;
 
+  // Build a mapping from original labels to shuffled labels for explanation text
+  const labelMap: Record<string, string> = {};
+  if (currentQuestion) {
+    currentQuestion.shuffledChoices.forEach((c) => {
+      labelMap[c.originalLabel] = c.label;
+    });
+  }
+  const correctShuffledLabel = currentQuestion
+    ? labelMap[currentQuestion.correctAnswer]
+    : "";
+  const remapExplanation = (text: string) => {
+    return text
+      .replace(/\bOption A\b/g, `Option __A__`)
+      .replace(/\bOption B\b/g, `Option __B__`)
+      .replace(/\bOption C\b/g, `Option __C__`)
+      .replace(/\bOption D\b/g, `Option __D__`)
+      .replace(/\bOptions? ([A-D]),?\s*(?:and\s+)?([A-D])(?:,?\s*and\s+([A-D]))?\b/g, (match) => match)
+      .replace(/__A__/g, labelMap["A"] || "A")
+      .replace(/__B__/g, labelMap["B"] || "B")
+      .replace(/__C__/g, labelMap["C"] || "C")
+      .replace(/__D__/g, labelMap["D"] || "D");
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="gradient-bar" />
@@ -502,11 +525,11 @@ export default function Home() {
                 }}
               >
                 {isCorrect ? "Correct" : "Incorrect"} &mdash; Answer:{" "}
-                {currentQuestion.correctAnswer}
+                {correctShuffledLabel}
               </span>
             </div>
             <p className="text-sm text-text-secondary leading-relaxed">
-              {currentQuestion.explanation}
+              {remapExplanation(currentQuestion.explanation)}
             </p>
             {currentQuestion.isAiGenerated && (
               <div className="mt-3 pt-3 border-t border-border">
