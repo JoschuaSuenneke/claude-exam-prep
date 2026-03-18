@@ -6,6 +6,8 @@ export interface Question {
   choices: { label: string; text: string }[];
   correctAnswer: string;
   explanation: string;
+  isAiGenerated?: boolean;
+  source?: string;
 }
 
 export const questions: Question[] = [
@@ -176,5 +178,421 @@ export const questions: Question[] = [
     ],
     correctAnswer: "A",
     explanation: "Splitting reviews into focused passes directly addresses the root cause: attention dilution when processing many files at once. File-by-file analysis ensures consistent depth, while a separate integration pass catches cross-file issues. Option B shifts burden to developers without improving the system. Option C misunderstands that larger context windows don't solve attention quality issues. Option D would actually suppress detection of real bugs by requiring consensus on issues that may only be caught intermittently."
+  },
+
+  // ===== AI-GENERATED TRAINING QUESTIONS =====
+  // Domain 1: Agentic Architecture & Orchestration (5 questions)
+
+  {
+    id: 13,
+    scenario: "Customer Support Resolution Agent",
+    domain: "Agentic Architecture & Orchestration",
+    text: "You are implementing the agentic loop for your customer support agent using the Claude Agent SDK. The agent needs to keep calling tools until the task is complete. What is the correct mechanism for determining when to continue the loop versus when to stop?",
+    choices: [
+      { label: "A", text: "Check if stop_reason is \"tool_use\" to continue the loop, and stop when stop_reason is \"end_turn\"." },
+      { label: "B", text: "Parse the assistant's text response for phrases like \"I'm done\" or \"task complete\" to determine when to stop." },
+      { label: "C", text: "Set a fixed iteration count and always run exactly that many turns regardless of the model's output." },
+      { label: "D", text: "Check if the response contains any text content blocks, and stop if it does." }
+    ],
+    correctAnswer: "A",
+    explanation: "The agentic loop continues when stop_reason is \"tool_use\" and terminates when stop_reason is \"end_turn\". As the docs state: \"With the Client SDK, you implement a tool loop... while response.stop_reason == 'tool_use': result = your_tool_executor(response.tool_use)\" — the loop checks stop_reason on each iteration. Parsing natural language signals (B) is explicitly called out as an anti-pattern. Fixed iteration caps (C) are arbitrary and may cut off work prematurely. Text content blocks (D) can appear alongside tool_use blocks.",
+    isAiGenerated: true,
+    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
+  },
+  {
+    id: 14,
+    scenario: "Multi-Agent Research System",
+    domain: "Agentic Architecture & Orchestration",
+    text: "You are building a coordinator agent that delegates to specialized subagents. You want the web search subagent to also spawn its own sub-subagents for parallel query expansion. Is this possible with Claude Code subagents?",
+    choices: [
+      { label: "A", text: "Yes, subagents can spawn other subagents up to 3 levels deep by default." },
+      { label: "B", text: "No, subagents cannot spawn other subagents. If you need nested delegation, use Skills or chain subagents from the main conversation." },
+      { label: "C", text: "Yes, but only if the subagent is configured with the \"general-purpose\" agent type." },
+      { label: "D", text: "Yes, subagents can spawn other subagents as long as they have the Agent tool in their allowedTools." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs explicitly state: \"Subagents cannot spawn other subagents. If your workflow requires nested delegation, use Skills or chain subagents from the main conversation.\" This is a hard constraint of the architecture, not a configuration issue.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/sub-agents"
+  },
+  {
+    id: 15,
+    scenario: "Developer Productivity with Claude",
+    domain: "Agentic Architecture & Orchestration",
+    text: "Your agent SDK application needs to enforce a business rule: refunds over $500 must be blocked before the tool executes and redirected to human review. You need a deterministic guarantee, not probabilistic compliance. Which mechanism should you use?",
+    choices: [
+      { label: "A", text: "Add the rule to the system prompt with strong language like \"NEVER process refunds over $500\"." },
+      { label: "B", text: "Use a PreToolUse hook that inspects the tool input, returns a \"deny\" permissionDecision, and adds context redirecting to the escalation workflow." },
+      { label: "C", text: "Add few-shot examples showing the agent refusing to process high-value refunds." },
+      { label: "D", text: "Use tool_choice to force the agent to call an escalation tool instead." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs describe PreToolUse hooks as providing programmatic control: \"PreToolUse returns decision inside hookSpecificOutput object for richer control: three outcomes (allow, deny, ask) plus ability to modify tool input before execution.\" Hooks provide deterministic guarantees that prompt-based approaches (A, C) cannot. tool_choice (D) would force a specific tool on every turn, not conditionally based on input values.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/hooks"
+  },
+  {
+    id: 16,
+    scenario: "Multi-Agent Research System",
+    domain: "Agentic Architecture & Orchestration",
+    text: "You resume a subagent to continue its previous research task. What happens to its conversation history?",
+    choices: [
+      { label: "A", text: "The subagent starts fresh with no prior context — subagents are always stateless." },
+      { label: "B", text: "The subagent retains its full conversation history, including all previous tool calls, results, and reasoning." },
+      { label: "C", text: "The subagent receives a summary of its previous conversation but not the full history." },
+      { label: "D", text: "The subagent inherits the parent agent's conversation history instead of its own." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"Resumed subagents retain their full conversation history, including all previous tool calls, results, and reasoning.\" This is distinct from spawning a new subagent, which starts with fresh context. Subagents never inherit the parent's context — they have isolated conversation histories.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/sub-agents"
+  },
+  {
+    id: 17,
+    scenario: "Developer Productivity with Claude",
+    domain: "Agentic Architecture & Orchestration",
+    text: "You want to explore two different refactoring approaches from the same analysis baseline — one using JWT and another using OAuth2. What's the correct SDK mechanism?",
+    choices: [
+      { label: "A", text: "Start two completely new sessions with the same initial prompt." },
+      { label: "B", text: "Use fork_session to create a new session that starts with a copy of the original's history, leaving the original unchanged." },
+      { label: "C", text: "Resume the original session twice in parallel from different threads." },
+      { label: "D", text: "Use the /branch command which creates a filesystem fork of the repository." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs describe fork_session precisely: \"Fork is different: it creates a new session that starts with a copy of the original's history. The original stays unchanged.\" and \"Forking branches the conversation history, not the filesystem.\" Starting new sessions (A) loses the shared analysis baseline. Resuming in parallel (C) would cause conflicts. /branch (D) creates a conversation branch, not an SDK-level fork.",
+    isAiGenerated: true,
+    source: "https://platform.claude.com/docs/en/agent-sdk/sessions"
+  },
+
+  // Domain 2: Tool Design & MCP Integration (5 questions)
+
+  {
+    id: 18,
+    scenario: "Structured Data Extraction",
+    domain: "Tool Design & MCP Integration",
+    text: "You need to guarantee that Claude calls a tool and that the tool inputs strictly match your JSON schema, with no type mismatches or missing fields. Which combination of settings achieves this?",
+    choices: [
+      { label: "A", text: "Set tool_choice to \"any\" and add strict: true to your tool definitions." },
+      { label: "B", text: "Set tool_choice to \"auto\" and add detailed descriptions to each parameter." },
+      { label: "C", text: "Set tool_choice to \"tool\" with the specific tool name and use extended thinking for better accuracy." },
+      { label: "D", text: "Set tool_choice to \"any\" and validate the output manually with Pydantic after each call." }
+    ],
+    correctAnswer: "A",
+    explanation: "The docs state: \"Combine tool_choice: {\\\"type\\\": \\\"any\\\"} with strict tool use to guarantee both that one of your tools will be called AND that the tool inputs strictly follow your schema.\" Option C won't work because extended thinking is NOT compatible with tool_choice \"tool\" — the docs note: \"tool_choice: {\\\"type\\\": \\\"any\\\"} and tool_choice: {\\\"type\\\": \\\"tool\\\"} will result in an error\" when used with extended thinking.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
+  },
+  {
+    id: 19,
+    scenario: "Customer Support Resolution Agent",
+    domain: "Tool Design & MCP Integration",
+    text: "Your team wants to share MCP server configurations across all developers via version control. Where should you configure these servers?",
+    choices: [
+      { label: "A", text: "In ~/.claude.json under each developer's home directory." },
+      { label: "B", text: "In a .mcp.json file at the project root, which is checked into version control." },
+      { label: "C", text: "In .claude/settings.json in the project directory." },
+      { label: "D", text: "In the CLAUDE.md file with @import references to server configs." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"Project scope: stored in a .mcp.json file at your project's root directory. This file is designed to be checked into version control, ensuring all team members have access to the same MCP tools and services.\" ~/.claude.json (A) is for local/user scope, not shared. For security: \"Claude Code prompts for approval before using project-scoped servers from .mcp.json files.\"",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/mcp"
+  },
+  {
+    id: 20,
+    scenario: "Developer Productivity with Claude",
+    domain: "Tool Design & MCP Integration",
+    text: "Your .mcp.json file needs to reference an API token without committing secrets to version control. What's the correct approach?",
+    choices: [
+      { label: "A", text: "Use environment variable expansion with ${VAR} syntax in the .mcp.json file, which Claude Code expands at runtime." },
+      { label: "B", text: "Store the token directly in .mcp.json and add the file to .gitignore." },
+      { label: "C", text: "Create a separate secrets.json file and reference it from .mcp.json." },
+      { label: "D", text: "Use the --env CLI flag to pass the token at startup." }
+    ],
+    correctAnswer: "A",
+    explanation: "The docs describe environment variable expansion: \"Supported syntax: ${VAR} — expands to value of VAR; ${VAR:-default} — expands to VAR if set, otherwise uses default.\" Expansion works in \"command, args, env, url, headers\" fields. This lets you commit .mcp.json to version control while keeping secrets in each developer's environment. The docs also warn: \"If a required environment variable is not set and has no default value, Claude Code will fail to parse the config.\"",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/mcp"
+  },
+  {
+    id: 21,
+    scenario: "Structured Data Extraction",
+    domain: "Tool Design & MCP Integration",
+    text: "You have 40+ MCP tools configured across multiple servers, and you notice Claude Code is consuming excessive context tokens loading all tool definitions upfront. What feature addresses this?",
+    choices: [
+      { label: "A", text: "Tool Search — Claude Code automatically defers MCP tools and uses a search tool to discover relevant ones on demand, reducing token usage by up to 85%." },
+      { label: "B", text: "Set MAX_MCP_OUTPUT_TOKENS to a lower value to reduce context consumption." },
+      { label: "C", text: "Split your tools across more MCP servers so each server has fewer tools." },
+      { label: "D", text: "Use the --disallowedTools flag to manually exclude tools you don't need." }
+    ],
+    correctAnswer: "A",
+    explanation: "The docs state: \"Claude Code automatically enables Tool Search when your MCP tool descriptions would consume more than 10% of the context window.\" and \"MCP tools are deferred rather than loaded into context upfront. Claude uses a search tool to discover relevant MCP tools when needed.\" This achieves \"an 85% reduction in token usage while maintaining access to your full tool library.\" Only ~500 tokens are loaded upfront for the search tool itself.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/mcp"
+  },
+  {
+    id: 22,
+    scenario: "Customer Support Resolution Agent",
+    domain: "Tool Design & MCP Integration",
+    text: "When a tool execution fails in the MCP protocol, what are the two distinct error reporting mechanisms?",
+    choices: [
+      { label: "A", text: "HTTP status codes for network errors and isError: true in tool results for business logic errors." },
+      { label: "B", text: "Protocol errors (standard JSON-RPC errors) for issues like unknown tools, and tool execution errors reported with isError: true for runtime failures." },
+      { label: "C", text: "Synchronous exceptions for immediate failures and webhook callbacks for async failures." },
+      { label: "D", text: "Error codes in the tool response schema and retry headers in the HTTP response." }
+    ],
+    correctAnswer: "B",
+    explanation: "The MCP spec defines two error reporting mechanisms: \"1. Protocol Errors: Standard JSON-RPC errors\" for issues like unknown tools, invalid arguments, and server errors; and \"2. Tool Execution Errors: Reported in tool results with isError: true\" for API failures, invalid input data, and business logic errors. These are architecturally distinct layers.",
+    isAiGenerated: true,
+    source: "https://modelcontextprotocol.io/docs/concepts/tools"
+  },
+
+  // Domain 3: Claude Code Configuration & Workflows (5 questions)
+
+  {
+    id: 23,
+    scenario: "Code Generation with Claude Code",
+    domain: "Claude Code Configuration & Workflows",
+    text: "Your CLAUDE.md file is getting long at 400+ lines and you notice Claude is adhering less consistently to instructions at the bottom. What does the documentation recommend?",
+    choices: [
+      { label: "A", text: "Target under 200 lines per CLAUDE.md file — longer files consume more context and reduce adherence." },
+      { label: "B", text: "There is no practical limit; Claude reads the entire file regardless of length." },
+      { label: "C", text: "Move the most important instructions to the bottom since Claude prioritizes the end of context." },
+      { label: "D", text: "Use the --append-system-prompt flag to inject the instructions directly into the system prompt instead." }
+    ],
+    correctAnswer: "A",
+    explanation: "The docs explicitly recommend: \"Size: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence.\" For larger projects, the solution is modular organization: split into .claude/rules/ files with path-specific scoping, or use @import to reference external files.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/memory"
+  },
+  {
+    id: 24,
+    scenario: "Code Generation with Claude Code",
+    domain: "Claude Code Configuration & Workflows",
+    text: "You want to create a skill that runs in complete isolation from the main conversation — it shouldn't see the conversation history and its verbose output shouldn't pollute the main context. Which frontmatter option achieves this?",
+    choices: [
+      { label: "A", text: "Set allowed-tools to an empty array to prevent the skill from accessing any tools." },
+      { label: "B", text: "Set context: fork to run the skill in a forked subagent context." },
+      { label: "C", text: "Set disable-model-invocation: true to prevent Claude from loading the skill." },
+      { label: "D", text: "Set user-invocable: false to hide it from the conversation." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"Add context: fork to your frontmatter when you want a skill to run in isolation. The skill content becomes the prompt that drives the subagent. It won't have access to your conversation history.\" The docs also warn: \"context: fork only makes sense for skills with explicit instructions. If your skill contains guidelines without a task, the subagent receives the guidelines but no actionable prompt, and returns without meaningful output.\"",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/skills"
+  },
+  {
+    id: 25,
+    scenario: "Claude Code for Continuous Integration",
+    domain: "Claude Code Configuration & Workflows",
+    text: "Your CI pipeline needs Claude Code to output machine-parseable JSON matching a specific schema for automated posting as PR comments. Which flags should you use?",
+    choices: [
+      { label: "A", text: "claude -p --output-format json --json-schema '{...}' \"review this PR\"" },
+      { label: "B", text: "claude --output-format json \"review this PR\"" },
+      { label: "C", text: "claude -p --json \"review this PR\"" },
+      { label: "D", text: "claude --batch --schema '{...}' \"review this PR\"" }
+    ],
+    correctAnswer: "A",
+    explanation: "The docs specify: \"-p\" for \"Print response without interactive mode\", \"--output-format\" with options \"text, json, stream-json\", and \"--json-schema\" to \"Get validated JSON output matching a JSON Schema after agent completes its workflow (print mode only)\". Both --output-format and --json-schema require -p (print mode). Options C and D reference flags that don't exist.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/cli-reference"
+  },
+  {
+    id: 26,
+    scenario: "Code Generation with Claude Code",
+    domain: "Claude Code Configuration & Workflows",
+    text: "In Claude Code's settings system, what happens when the same array-valued setting (like permissions.allow) appears in both user settings and project settings?",
+    choices: [
+      { label: "A", text: "Project settings completely replace user settings for that key." },
+      { label: "B", text: "User settings take precedence since they are more specific to the individual." },
+      { label: "C", text: "The arrays are concatenated and deduplicated, not replaced." },
+      { label: "D", text: "An error is thrown due to the configuration conflict." }
+    ],
+    correctAnswer: "C",
+    explanation: "The docs state: \"Array settings merge across scopes. When the same array-valued setting (such as sandbox.filesystem.allowWrite or permissions.allow) appears in multiple scopes, the arrays are concatenated and deduplicated, not replaced.\" This is distinct from scalar settings where the higher-priority scope wins.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/settings"
+  },
+  {
+    id: 27,
+    scenario: "Code Generation with Claude Code",
+    domain: "Claude Code Configuration & Workflows",
+    text: "You have CLAUDE.md files at multiple levels: ~/.claude/CLAUDE.md, ./CLAUDE.md, and ./src/components/CLAUDE.md. When does the subdirectory CLAUDE.md get loaded?",
+    choices: [
+      { label: "A", text: "All CLAUDE.md files are loaded at session start regardless of location." },
+      { label: "B", text: "CLAUDE.md files above and at the working directory load at launch; subdirectory CLAUDE.md files load on demand when Claude reads files in those subdirectories." },
+      { label: "C", text: "Only the root CLAUDE.md is loaded; subdirectory files are ignored." },
+      { label: "D", text: "Subdirectory CLAUDE.md files override the root CLAUDE.md when working in that directory." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"CLAUDE.md files in the directory hierarchy above the working directory are loaded in full at launch. CLAUDE.md files in subdirectories load on demand when Claude reads files in those directories.\" This means ~/.claude/CLAUDE.md and ./CLAUDE.md load immediately, but ./src/components/CLAUDE.md only loads when Claude accesses files in that directory.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/memory"
+  },
+
+  // Domain 4: Prompt Engineering & Structured Output (5 questions)
+
+  {
+    id: 28,
+    scenario: "Structured Data Extraction",
+    domain: "Prompt Engineering & Structured Output",
+    text: "You are using tool_choice set to \"any\" to force structured output. You also want Claude to explain its reasoning in natural language before making the tool call. Is this possible?",
+    choices: [
+      { label: "A", text: "Yes, just add \"explain your reasoning before calling the tool\" to the system prompt." },
+      { label: "B", text: "No — when tool_choice is \"any\" or \"tool\", the API prefills the assistant message to force a tool call, meaning the model will not emit natural language before tool_use blocks, even if explicitly asked." },
+      { label: "C", text: "Yes, if you enable extended thinking alongside tool_choice \"any\"." },
+      { label: "D", text: "Yes, by setting disable_parallel_tool_use to true." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs explicitly state: \"When you have tool_choice as any or tool, the API prefills the assistant message to force a tool to be used. This means that the models will not emit a natural language response or explanation before tool_use content blocks, even if explicitly asked to do so.\" Option C is also wrong: extended thinking is NOT compatible with tool_choice \"any\" or \"tool\" and \"will result in an error.\"",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
+  },
+  {
+    id: 29,
+    scenario: "Claude Code for Continuous Integration",
+    domain: "Prompt Engineering & Structured Output",
+    text: "You're designing prompts for a code review system and want consistent output quality. The Anthropic docs recommend a specific technique for achieving consistently formatted, actionable output when detailed instructions alone produce inconsistent results. What is it?",
+    choices: [
+      { label: "A", text: "Increase the temperature to allow more creative responses." },
+      { label: "B", text: "Use 3-5 few-shot examples wrapped in <example> tags, making them relevant, diverse, and structured." },
+      { label: "C", text: "Use a larger model with more parameters." },
+      { label: "D", text: "Add the instruction \"be consistent\" to the system prompt." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"Examples are one of the most reliable ways to steer Claude's output format, tone, and structure. A few well-crafted examples (known as few-shot or multishot prompting) can dramatically improve accuracy and consistency.\" They recommend: \"Include 3-5 examples for best results\" and making them \"Relevant: Mirror your actual use case closely. Diverse: Cover edge cases. Structured: Wrap examples in <example> tags.\"",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
+  },
+  {
+    id: 30,
+    scenario: "Structured Data Extraction",
+    domain: "Prompt Engineering & Structured Output",
+    text: "Your batch processing job submitted 10,000 documents via the Message Batches API. The results come back, but they're not in the same order as your requests. How do you match results to their original requests?",
+    choices: [
+      { label: "A", text: "Results are always returned in submission order — check your parsing logic." },
+      { label: "B", text: "Use the custom_id field on each request to correlate batch request/response pairs." },
+      { label: "C", text: "Use the array index since batch results maintain positional correspondence." },
+      { label: "D", text: "Parse the content of each result to infer which document it corresponds to." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"Batch results can be returned in any order, and may not match the ordering of requests when the batch was created... To correctly match results with their corresponding requests, always use the custom_id field.\" Each request requires a unique custom_id specifically for this purpose.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/batch-processing"
+  },
+  {
+    id: 31,
+    scenario: "Structured Data Extraction",
+    domain: "Prompt Engineering & Structured Output",
+    text: "You have a long document analysis prompt with the document content and your query. Where should you place each component for optimal response quality?",
+    choices: [
+      { label: "A", text: "Put the query first, then the document — Claude prioritizes content it sees first." },
+      { label: "B", text: "Interleave the query throughout the document at regular intervals." },
+      { label: "C", text: "Put the long document at the top and your query at the end — this can improve response quality by up to 30%." },
+      { label: "D", text: "It doesn't matter — Claude processes all positions equally." }
+    ],
+    correctAnswer: "C",
+    explanation: "The docs state: \"Put longform data at the top: Place your long documents and inputs near the top of your prompt, above your query, instructions, and examples.\" and \"Queries at the end can improve response quality by up to 30% in tests, especially with complex, multi-document inputs.\"",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
+  },
+  {
+    id: 32,
+    scenario: "Claude Code for Continuous Integration",
+    domain: "Prompt Engineering & Structured Output",
+    text: "Which of the following workloads is NOT appropriate for the Message Batches API?",
+    choices: [
+      { label: "A", text: "Overnight technical debt reports generated for morning review." },
+      { label: "B", text: "Weekly compliance audits across all repositories." },
+      { label: "C", text: "A blocking pre-merge check that must complete before developers can merge." },
+      { label: "D", text: "Nightly test generation for newly added functions." }
+    ],
+    correctAnswer: "C",
+    explanation: "The Message Batches API \"offers 50% cost savings but has processing times up to 24 hours with no guaranteed latency SLA.\" This makes it unsuitable for blocking workflows. The docs note it is \"well-suited to tasks that do not require immediate responses, with most batches finishing in less than 1 hour.\" Pre-merge checks (C) are blocking — developers wait for results — making the synchronous API the correct choice.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/batch-processing"
+  },
+
+  // Domain 5: Context Management & Reliability (5 questions)
+
+  {
+    id: 33,
+    scenario: "Multi-Agent Research System",
+    domain: "Context Management & Reliability",
+    text: "During extended codebase exploration, your Claude Code session's context window is approaching its limit. What happens automatically, and what is the key risk?",
+    choices: [
+      { label: "A", text: "The session crashes with an out-of-context error and must be restarted." },
+      { label: "B", text: "The SDK automatically compacts the conversation by summarizing older history, but specific instructions from early in the conversation may not be preserved." },
+      { label: "C", text: "Claude automatically switches to a smaller, faster model to conserve tokens." },
+      { label: "D", text: "The session continues normally — there is no context limit with Claude Code." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs state: \"When the context window approaches its limit, the SDK automatically compacts the conversation: it summarizes older history to free space, keeping your most recent exchanges and key decisions intact.\" The key risk: \"Compaction replaces older messages with a summary, so specific instructions from early in the conversation may not be preserved. Persistent rules belong in CLAUDE.md rather than in the initial prompt.\"",
+    isAiGenerated: true,
+    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
+  },
+  {
+    id: 34,
+    scenario: "Customer Support Resolution Agent",
+    domain: "Context Management & Reliability",
+    text: "Your customer support agent handles multi-issue sessions where customers raise several problems across a long conversation. As the conversation grows, the agent starts giving vague responses referencing \"typical patterns\" instead of the specific order numbers and dates discussed earlier. What is this phenomenon and how should you address it?",
+    choices: [
+      { label: "A", text: "This is the \"lost in the middle\" effect — extract transactional facts into a persistent \"case facts\" block included in each prompt, outside of summarized history." },
+      { label: "B", text: "Increase max_tokens to give the model more room to process the full conversation." },
+      { label: "C", text: "Switch to a model with a larger context window." },
+      { label: "D", text: "Add a system prompt instruction telling the model to always reference specific details." }
+    ],
+    correctAnswer: "A",
+    explanation: "The exam guide describes this exact pattern under context management: models reliably process information at the beginning and end of long inputs but may omit findings from middle sections. The solution is extracting transactional facts (amounts, dates, order numbers, statuses) into a persistent \"case facts\" block included in each prompt, outside summarized history. A larger context window (C) doesn't fix attention distribution issues.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
+  },
+  {
+    id: 35,
+    scenario: "Multi-Agent Research System",
+    domain: "Context Management & Reliability",
+    text: "Your synthesis subagent receives findings from multiple research subagents, but after progressive summarization across agents, source attribution has been lost. You can no longer trace which claims came from which sources. What structural change prevents this?",
+    choices: [
+      { label: "A", text: "Have each subagent include structured claim-source mappings (source URLs, document names, relevant excerpts) that downstream agents must preserve through synthesis." },
+      { label: "B", text: "Have the synthesis agent search the web again to re-verify all claims." },
+      { label: "C", text: "Add a post-processing step that uses a classifier to guess source attribution." },
+      { label: "D", text: "Limit the research to a single subagent to avoid cross-agent attribution loss." }
+    ],
+    correctAnswer: "A",
+    explanation: "The exam guide specifically addresses information provenance: source attribution is lost during summarization steps when findings are compressed without preserving claim-source mappings. The solution is requiring subagents to output structured claim-source mappings that the synthesis agent must preserve and merge when combining findings. Re-searching (B) wastes resources and may find different results.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/agents"
+  },
+  {
+    id: 36,
+    scenario: "Developer Productivity with Claude",
+    domain: "Context Management & Reliability",
+    text: "After compacting a Claude Code session with /compact, what happens to the CLAUDE.md instructions?",
+    choices: [
+      { label: "A", text: "CLAUDE.md content is summarized along with the rest of the conversation." },
+      { label: "B", text: "CLAUDE.md fully survives compaction — Claude re-reads it from disk and re-injects it fresh into the session." },
+      { label: "C", text: "CLAUDE.md is dropped entirely and must be manually re-imported." },
+      { label: "D", text: "Only the first 50 lines of CLAUDE.md survive compaction." }
+    ],
+    correctAnswer: "B",
+    explanation: "The docs explicitly state: \"CLAUDE.md fully survives compaction. After /compact, Claude re-reads your CLAUDE.md from disk and re-injects it fresh into the session.\" This is why persistent rules belong in CLAUDE.md rather than in conversation prompts — CLAUDE.md survives compaction while conversation content gets summarized.",
+    isAiGenerated: true,
+    source: "https://code.claude.com/docs/en/memory"
+  },
+  {
+    id: 37,
+    scenario: "Multi-Agent Research System",
+    domain: "Context Management & Reliability",
+    text: "A subagent silently returns an empty result set after failing to access a database. The coordinator treats this as \"no results found\" and continues, producing an incomplete report with no indication of the gap. What anti-pattern is this, and what's the fix?",
+    choices: [
+      { label: "A", text: "This is expected behavior — empty results are a valid response. No fix needed." },
+      { label: "B", text: "This is the error suppression anti-pattern. The subagent should return structured error context (failure type, what was attempted, partial results) so the coordinator can make informed recovery decisions." },
+      { label: "C", text: "The coordinator should always run each subagent twice to verify results." },
+      { label: "D", text: "Add a timeout that terminates the entire workflow if any subagent returns empty results." }
+    ],
+    correctAnswer: "B",
+    explanation: "The exam guide explicitly calls out this anti-pattern: silently suppressing errors (returning empty results as success) or terminating entire workflows on single failures are both anti-patterns. The correct approach is returning structured error context including failure type, attempted query, partial results, and potential alternatives, enabling intelligent coordinator recovery decisions. The coordinator must be able to distinguish access failures from valid empty results.",
+    isAiGenerated: true,
+    source: "https://docs.anthropic.com/en/docs/agents"
   }
 ];

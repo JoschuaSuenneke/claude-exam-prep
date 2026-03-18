@@ -497,6 +497,26 @@ export default function Home() {
             <p className="text-sm text-text-secondary leading-relaxed">
               {currentQuestion.explanation}
             </p>
+            {currentQuestion.isAiGenerated && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <span className="inline-block px-2 py-0.5 bg-surface-alt text-text-muted text-xs font-mono rounded-full mb-2">
+                  AI-GENERATED TRAINING QUESTION
+                </span>
+                {currentQuestion.source && (
+                  <p className="text-xs text-text-muted">
+                    Source:{" "}
+                    <a
+                      href={currentQuestion.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-text-secondary transition-colors"
+                    >
+                      {currentQuestion.source.replace("https://", "")}
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
