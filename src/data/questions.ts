@@ -187,31 +187,31 @@ export const questions: Question[] = [
     id: 13,
     scenario: "Customer Support Resolution Agent",
     domain: "Agentic Architecture & Orchestration",
-    text: "You are implementing the agentic loop for your customer support agent using the Claude Agent SDK. The agent needs to keep calling tools until the task is complete. What is the correct mechanism for determining when to continue the loop versus when to stop?",
+    text: "Your customer support agent processes return requests by looking up the order, checking return eligibility, and issuing refunds. In production, you discover that 8% of refund calls execute before the order lookup completes, causing refunds to the wrong account. Your team debates two fixes: adding a strongly-worded system prompt instruction about always looking up orders first, or implementing a PreToolUse hook that blocks process_refund until lookup_order has returned successfully in the current session. Given that incorrect refunds cost your company an average of $340 per incident, which approach should you choose and why?",
     choices: [
-      { label: "A", text: "Check if stop_reason is \"tool_use\" to continue the loop, and stop when stop_reason is \"end_turn\"." },
-      { label: "B", text: "Parse the assistant's text response for phrases like \"I'm done\" or \"task complete\" to determine when to stop." },
-      { label: "C", text: "Set a fixed iteration count and always run exactly that many turns regardless of the model's output." },
-      { label: "D", text: "Check if the response contains any text content blocks, and stop if it does." }
+      { label: "A", text: "The system prompt instruction is sufficient — Claude follows explicit instructions reliably when they're clearly stated." },
+      { label: "B", text: "Implement the PreToolUse hook, because when errors have financial consequences, programmatic enforcement provides deterministic guarantees that prompt-based approaches cannot." },
+      { label: "C", text: "Use both approaches together — the hook as primary defense and the prompt instruction as backup." },
+      { label: "D", text: "Neither — retrain the agent on examples of correct ordering instead." }
     ],
-    correctAnswer: "A",
-    explanation: "The agentic loop continues when stop_reason is \"tool_use\" and terminates when stop_reason is \"end_turn\". As the docs state: \"With the Client SDK, you implement a tool loop... while response.stop_reason == 'tool_use': result = your_tool_executor(response.tool_use)\" — the loop checks stop_reason on each iteration. Parsing natural language signals (B) is explicitly called out as an anti-pattern. Fixed iteration caps (C) are arbitrary and may cut off work prematurely. Text content blocks (D) can appear alongside tool_use blocks.",
+    correctAnswer: "B",
+    explanation: "As the docs state, PreToolUse hooks provide \"three outcomes (allow, deny, ask) plus ability to modify tool input before execution.\" When financial consequences exist, the exam guide emphasizes: programmatic enforcement (hooks, prerequisite gates) provides deterministic guarantees that prompt-based guidance cannot. Option C is over-engineered — the hook alone is sufficient since it's deterministic. Option A relies on probabilistic LLM compliance which already failed 8% of the time.",
     isAiGenerated: true,
-    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
+    source: "https://code.claude.com/docs/en/hooks"
   },
   {
     id: 14,
     scenario: "Multi-Agent Research System",
     domain: "Agentic Architecture & Orchestration",
-    text: "You are building a coordinator agent that delegates to specialized subagents. You want the web search subagent to also spawn its own sub-subagents for parallel query expansion. Is this possible with Claude Code subagents?",
+    text: "Your multi-agent research system has a coordinator that delegates to web search, document analysis, and synthesis subagents. During testing, you find that the synthesis subagent sometimes needs to verify a statistic but can only do so by returning control to the coordinator, which then invokes the web search agent — adding 2-3 round trips and 40% latency. You analyze verification requests and find 85% are simple fact-checks (dates, names, numbers) while 15% need deep investigation. A teammate suggests giving the synthesis agent full access to all web search tools. What's wrong with that approach, and what should you do instead?",
     choices: [
-      { label: "A", text: "Yes, subagents can spawn other subagents up to 3 levels deep by default." },
-      { label: "B", text: "No, subagents cannot spawn other subagents. If you need nested delegation, use Skills or chain subagents from the main conversation." },
-      { label: "C", text: "Yes, but only if the subagent is configured with the \"general-purpose\" agent type." },
-      { label: "D", text: "Yes, subagents can spawn other subagents as long as they have the Agent tool in their allowedTools." }
+      { label: "A", text: "Give the synthesis agent full web search access — it's the simplest solution and avoids round-trips entirely." },
+      { label: "B", text: "Give the synthesis agent a scoped verify_fact tool for simple lookups only, keeping complex verifications routed through the coordinator to the web search agent." },
+      { label: "C", text: "Have the synthesis agent batch all verification needs and send them to the coordinator at the end of its pass." },
+      { label: "D", text: "Pre-cache extra context during initial research to anticipate what the synthesis agent might need." }
     ],
     correctAnswer: "B",
-    explanation: "The docs explicitly state: \"Subagents cannot spawn other subagents. If your workflow requires nested delegation, use Skills or chain subagents from the main conversation.\" This is a hard constraint of the architecture, not a configuration issue.",
+    explanation: "The docs emphasize scoped tool access: giving agents tools outside their specialization leads to misuse. The principle of least privilege means giving the synthesis agent only what it needs for the 85% common case (simple fact verification) while preserving the coordinator pattern for complex cases. Full search access (A) over-provisions the agent, violating separation of concerns. Batching (C) creates blocking dependencies since synthesis steps may depend on earlier verified facts. Pre-caching (D) relies on speculation that can't reliably predict needs.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/sub-agents"
   },
@@ -219,49 +219,49 @@ export const questions: Question[] = [
     id: 15,
     scenario: "Developer Productivity with Claude",
     domain: "Agentic Architecture & Orchestration",
-    text: "Your agent SDK application needs to enforce a business rule: refunds over $500 must be blocked before the tool executes and redirected to human review. You need a deterministic guarantee, not probabilistic compliance. Which mechanism should you use?",
+    text: "Your team uses a Claude Agent SDK application to assist with code migrations. After analyzing a large legacy codebase in a session, you want to explore two competing refactoring strategies — one using a microservices approach and another using a modular monolith — without losing the analysis work already done. Both explorations will make different file changes. What's the best approach?",
     choices: [
-      { label: "A", text: "Add the rule to the system prompt with strong language like \"NEVER process refunds over $500\"." },
-      { label: "B", text: "Use a PreToolUse hook that inspects the tool input, returns a \"deny\" permissionDecision, and adds context redirecting to the escalation workflow." },
-      { label: "C", text: "Add few-shot examples showing the agent refusing to process high-value refunds." },
-      { label: "D", text: "Use tool_choice to force the agent to call an escalation tool instead." }
+      { label: "A", text: "Start two completely new sessions with the same initial analysis prompt, accepting that the analysis work will be duplicated." },
+      { label: "B", text: "Use fork_session to branch the conversation history into two independent sessions, each preserving the original analysis while exploring a different strategy." },
+      { label: "C", text: "Run both explorations sequentially in the same session, using git stash to separate the changes." },
+      { label: "D", text: "Resume the same session twice in parallel threads — each will get its own copy of the history." }
     ],
     correctAnswer: "B",
-    explanation: "The docs describe PreToolUse hooks as providing programmatic control: \"PreToolUse returns decision inside hookSpecificOutput object for richer control: three outcomes (allow, deny, ask) plus ability to modify tool input before execution.\" Hooks provide deterministic guarantees that prompt-based approaches (A, C) cannot. tool_choice (D) would force a specific tool on every turn, not conditionally based on input values.",
+    explanation: "The docs describe fork_session: \"Fork creates a new session that starts with a copy of the original's history. The original stays unchanged\" and \"Forking branches the conversation history, not the filesystem.\" This preserves the expensive analysis baseline while enabling divergent exploration. New sessions (A) waste the analysis work. Sequential exploration (C) risks context pollution between approaches. Parallel resume (D) would cause session file conflicts.",
     isAiGenerated: true,
-    source: "https://code.claude.com/docs/en/hooks"
+    source: "https://platform.claude.com/docs/en/agent-sdk/sessions"
   },
   {
     id: 16,
     scenario: "Multi-Agent Research System",
     domain: "Agentic Architecture & Orchestration",
-    text: "You resume a subagent to continue its previous research task. What happens to its conversation history?",
+    text: "You're designing a research pipeline where the coordinator delegates to a web search subagent, then passes findings to a document analysis subagent, then to a synthesis subagent. The synthesis subagent produces a report, but it's missing key details from the web search phase. Investigation shows the coordinator passed only a brief summary of web search results to the document analysis subagent, which then passed an even shorter summary to synthesis. What's the root cause?",
     choices: [
-      { label: "A", text: "The subagent starts fresh with no prior context — subagents are always stateless." },
-      { label: "B", text: "The subagent retains its full conversation history, including all previous tool calls, results, and reasoning." },
-      { label: "C", text: "The subagent receives a summary of its previous conversation but not the full history." },
-      { label: "D", text: "The subagent inherits the parent agent's conversation history instead of its own." }
+      { label: "A", text: "The subagents' context windows are too small — upgrade to a model with a larger context." },
+      { label: "B", text: "Progressive summarization across the chain compressed findings until key details were lost. Each subagent should receive the complete findings from prior agents directly in its prompt, not summaries of summaries." },
+      { label: "C", text: "The synthesis subagent should have access to the web search tool to re-find any missing information." },
+      { label: "D", text: "The coordinator should run all three subagents in parallel instead of sequentially." }
     ],
     correctAnswer: "B",
-    explanation: "The docs state: \"Resumed subagents retain their full conversation history, including all previous tool calls, results, and reasoning.\" This is distinct from spawning a new subagent, which starts with fresh context. Subagents never inherit the parent's context — they have isolated conversation histories.",
+    explanation: "The docs state that each subagent \"starts with a fresh conversation (no prior message history)\" and \"only its final response returns to the parent as a tool result.\" The exam guide warns about progressive summarization risks: condensing numerical values, percentages, dates into vague summaries. The fix is including complete findings from prior agents directly in each subagent's prompt — the coordinator must pass full results, not summaries. Running in parallel (D) would prevent the sequential dependency the pipeline requires.",
     isAiGenerated: true,
-    source: "https://code.claude.com/docs/en/sub-agents"
+    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
   },
   {
     id: 17,
-    scenario: "Developer Productivity with Claude",
+    scenario: "Customer Support Resolution Agent",
     domain: "Agentic Architecture & Orchestration",
-    text: "You want to explore two different refactoring approaches from the same analysis baseline — one using JWT and another using OAuth2. What's the correct SDK mechanism?",
+    text: "Your support agent uses PostToolUse hooks to normalize data from MCP tools before the agent processes the results. One tool returns timestamps as Unix epoch integers, another returns ISO 8601 strings, and a third returns human-readable dates like \"March 15, 2026\". The agent frequently confuses dates across tools, comparing them incorrectly. What's the most effective fix?",
     choices: [
-      { label: "A", text: "Start two completely new sessions with the same initial prompt." },
-      { label: "B", text: "Use fork_session to create a new session that starts with a copy of the original's history, leaving the original unchanged." },
-      { label: "C", text: "Resume the original session twice in parallel from different threads." },
-      { label: "D", text: "Use the /branch command which creates a filesystem fork of the repository." }
+      { label: "A", text: "Add system prompt instructions telling the agent to always convert dates to a common format before comparing." },
+      { label: "B", text: "Implement PostToolUse hooks that normalize all date formats to ISO 8601 before the agent processes the tool results, providing deterministic consistency." },
+      { label: "C", text: "Create a dedicated date_comparison tool that handles format differences internally." },
+      { label: "D", text: "Switch all backend systems to use the same date format." }
     ],
     correctAnswer: "B",
-    explanation: "The docs describe fork_session precisely: \"Fork is different: it creates a new session that starts with a copy of the original's history. The original stays unchanged.\" and \"Forking branches the conversation history, not the filesystem.\" Starting new sessions (A) loses the shared analysis baseline. Resuming in parallel (C) would cause conflicts. /branch (D) creates a conversation branch, not an SDK-level fork.",
+    explanation: "The docs describe hooks that \"intercept tool results for transformation before the model processes them.\" PostToolUse hooks run after tool execution and can transform results before the agent sees them. This provides deterministic format normalization — the agent always sees consistent ISO 8601 dates regardless of source. System prompt instructions (A) rely on probabilistic compliance. A comparison tool (C) doesn't fix the underlying inconsistency. Changing backends (D) may not be feasible.",
     isAiGenerated: true,
-    source: "https://platform.claude.com/docs/en/agent-sdk/sessions"
+    source: "https://code.claude.com/docs/en/hooks"
   },
 
   // Domain 2: Tool Design & MCP Integration (5 questions)
@@ -270,47 +270,47 @@ export const questions: Question[] = [
     id: 18,
     scenario: "Structured Data Extraction",
     domain: "Tool Design & MCP Integration",
-    text: "You need to guarantee that Claude calls a tool and that the tool inputs strictly match your JSON schema, with no type mismatches or missing fields. Which combination of settings achieves this?",
+    text: "You're building a document extraction pipeline that must produce guaranteed schema-compliant JSON output. Your extraction tool has a detailed JSON schema with required fields, enum types, and nullable fields for information that may not exist in every document. You need Claude to always call the extraction tool (never respond with text) AND guarantee the inputs match your schema exactly. You're also considering enabling extended thinking for better extraction accuracy. What configuration achieves all three goals?",
     choices: [
-      { label: "A", text: "Set tool_choice to \"any\" and add strict: true to your tool definitions." },
-      { label: "B", text: "Set tool_choice to \"auto\" and add detailed descriptions to each parameter." },
-      { label: "C", text: "Set tool_choice to \"tool\" with the specific tool name and use extended thinking for better accuracy." },
-      { label: "D", text: "Set tool_choice to \"any\" and validate the output manually with Pydantic after each call." }
+      { label: "A", text: "Set tool_choice to \"any\" with strict: true. Extended thinking works alongside this configuration." },
+      { label: "B", text: "Set tool_choice to \"any\" with strict: true, but accept that extended thinking cannot be used with forced tool selection — it requires tool_choice \"auto\"." },
+      { label: "C", text: "Set tool_choice to \"auto\" with strict: true and add a system prompt instruction to always use the tool." },
+      { label: "D", text: "Use tool_choice \"tool\" with the extraction tool name and enable extended thinking for maximum accuracy." }
     ],
-    correctAnswer: "A",
-    explanation: "The docs state: \"Combine tool_choice: {\\\"type\\\": \\\"any\\\"} with strict tool use to guarantee both that one of your tools will be called AND that the tool inputs strictly follow your schema.\" Option C won't work because extended thinking is NOT compatible with tool_choice \"tool\" — the docs note: \"tool_choice: {\\\"type\\\": \\\"any\\\"} and tool_choice: {\\\"type\\\": \\\"tool\\\"} will result in an error\" when used with extended thinking.",
+    correctAnswer: "B",
+    explanation: "The docs state you can \"Combine tool_choice 'any' with strict tool use to guarantee both that one of your tools will be called AND that the tool inputs strictly follow your schema.\" However, extended thinking is NOT compatible with forced tool selection: \"tool_choice 'any' and tool_choice 'tool' will result in an error\" with extended thinking — only \"auto\" and \"none\" work. You must choose between forced tool use and extended thinking.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
   },
   {
     id: 19,
-    scenario: "Customer Support Resolution Agent",
+    scenario: "Developer Productivity with Claude",
     domain: "Tool Design & MCP Integration",
-    text: "Your team wants to share MCP server configurations across all developers via version control. Where should you configure these servers?",
+    text: "Your team of 8 developers uses Claude Code with shared MCP servers for Jira, GitHub, and your internal deployment API. The Jira and GitHub servers use standard community implementations, while the deployment API is custom-built. You need all developers to have the same MCP configuration when they clone the repo, but the deployment API requires each developer's personal access token. How should you set this up?",
     choices: [
-      { label: "A", text: "In ~/.claude.json under each developer's home directory." },
-      { label: "B", text: "In a .mcp.json file at the project root, which is checked into version control." },
-      { label: "C", text: "In .claude/settings.json in the project directory." },
-      { label: "D", text: "In the CLAUDE.md file with @import references to server configs." }
+      { label: "A", text: "Put all three servers in .mcp.json at the project root with environment variable expansion (${DEPLOY_TOKEN}) for the deployment API token. Each developer sets the env var locally." },
+      { label: "B", text: "Put all three servers in ~/.claude.json so each developer can configure their own tokens." },
+      { label: "C", text: "Put Jira and GitHub in .mcp.json and the deployment API in each developer's ~/.claude.json." },
+      { label: "D", text: "Put the server configs in CLAUDE.md with instructions for developers to set up MCP servers manually." }
     ],
-    correctAnswer: "B",
-    explanation: "The docs state: \"Project scope: stored in a .mcp.json file at your project's root directory. This file is designed to be checked into version control, ensuring all team members have access to the same MCP tools and services.\" ~/.claude.json (A) is for local/user scope, not shared. For security: \"Claude Code prompts for approval before using project-scoped servers from .mcp.json files.\"",
+    correctAnswer: "A",
+    explanation: "The docs state: \".mcp.json at your project's root directory is designed to be checked into version control, ensuring all team members have access to the same MCP tools.\" For secrets: \"Supported syntax: ${VAR} — expands to value of VAR; ${VAR:-default}.\" This lets you commit the config while keeping tokens in each developer's environment. Splitting configs (C) means developers could miss the deployment API setup. Manual instructions (D) are error-prone.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/mcp"
   },
   {
     id: 20,
-    scenario: "Developer Productivity with Claude",
+    scenario: "Customer Support Resolution Agent",
     domain: "Tool Design & MCP Integration",
-    text: "Your .mcp.json file needs to reference an API token without committing secrets to version control. What's the correct approach?",
+    text: "Your agent has access to 45 MCP tools across 6 servers (CRM, order management, billing, shipping, knowledge base, and escalation). You notice that tool selection accuracy has dropped significantly — the agent frequently calls the CRM's get_account_details when it should call order management's get_order_status, and sometimes calls knowledge base search tools when it should be using the CRM. What's the most likely root cause, and what's the highest-leverage first fix?",
     choices: [
-      { label: "A", text: "Use environment variable expansion with ${VAR} syntax in the .mcp.json file, which Claude Code expands at runtime." },
-      { label: "B", text: "Store the token directly in .mcp.json and add the file to .gitignore." },
-      { label: "C", text: "Create a separate secrets.json file and reference it from .mcp.json." },
-      { label: "D", text: "Use the --env CLI flag to pass the token at startup." }
+      { label: "A", text: "The model is too small — upgrade to a larger model that can handle more tool definitions." },
+      { label: "B", text: "Too many tools degrade selection reliability by increasing decision complexity. Enable Tool Search so tools are deferred and discovered on demand rather than loaded upfront, and improve tool descriptions to clearly differentiate similar tools." },
+      { label: "C", text: "Implement a routing classifier that pre-selects the correct server based on the user's query before passing it to Claude." },
+      { label: "D", text: "Remove tools the agent rarely uses to reduce the total count below 20." }
     ],
-    correctAnswer: "A",
-    explanation: "The docs describe environment variable expansion: \"Supported syntax: ${VAR} — expands to value of VAR; ${VAR:-default} — expands to VAR if set, otherwise uses default.\" Expansion works in \"command, args, env, url, headers\" fields. This lets you commit .mcp.json to version control while keeping secrets in each developer's environment. The docs also warn: \"If a required environment variable is not set and has no default value, Claude Code will fail to parse the config.\"",
+    correctAnswer: "B",
+    explanation: "The docs state that giving agents \"too many tools (e.g., 18 instead of 4-5) degrades tool selection reliability by increasing decision complexity\" and that Tool Search achieves \"an 85% reduction in token usage while maintaining access to your full tool library\" by deferring tools and loading only what's needed. The docs also emphasize that tool descriptions are \"the primary mechanism LLMs use for tool selection\" — improving descriptions is the highest-leverage fix alongside Tool Search.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/mcp"
   },
@@ -318,33 +318,33 @@ export const questions: Question[] = [
     id: 21,
     scenario: "Structured Data Extraction",
     domain: "Tool Design & MCP Integration",
-    text: "You have 40+ MCP tools configured across multiple servers, and you notice Claude Code is consuming excessive context tokens loading all tool definitions upfront. What feature addresses this?",
+    text: "Your extraction pipeline processes invoices from 50 different vendors. Each vendor's invoices have slightly different layouts, but you want to extract the same fields (vendor name, total, line items, date). Some invoices don't include all fields. A teammate suggests making all fields required in the JSON schema to ensure complete extraction. Why is this a bad idea, and what should you do instead?",
     choices: [
-      { label: "A", text: "Tool Search — Claude Code automatically defers MCP tools and uses a search tool to discover relevant ones on demand, reducing token usage by up to 85%." },
-      { label: "B", text: "Set MAX_MCP_OUTPUT_TOKENS to a lower value to reduce context consumption." },
-      { label: "C", text: "Split your tools across more MCP servers so each server has fewer tools." },
-      { label: "D", text: "Use the --disallowedTools flag to manually exclude tools you don't need." }
+      { label: "A", text: "Required fields are fine — Claude will always find the information if it exists in the document." },
+      { label: "B", text: "Making fields required when source documents may not contain them forces Claude to fabricate values to satisfy the schema. Make fields that may be absent nullable/optional instead, so Claude returns null rather than hallucinating." },
+      { label: "C", text: "Use a separate schema for each vendor that only includes fields present in that vendor's invoices." },
+      { label: "D", text: "Make all fields required but add a post-processing step to remove likely hallucinated values." }
     ],
-    correctAnswer: "A",
-    explanation: "The docs state: \"Claude Code automatically enables Tool Search when your MCP tool descriptions would consume more than 10% of the context window.\" and \"MCP tools are deferred rather than loaded into context upfront. Claude uses a search tool to discover relevant MCP tools when needed.\" This achieves \"an 85% reduction in token usage while maintaining access to your full tool library.\" Only ~500 tokens are loaded upfront for the search tool itself.",
+    correctAnswer: "B",
+    explanation: "The exam guide explicitly covers this: \"Schema design considerations: required vs optional fields, enum fields with 'other' + detail string patterns for extensible categories.\" Making fields optional/nullable \"when source documents may not contain the information\" prevents \"the model from fabricating values to satisfy required fields.\" Per-vendor schemas (C) don't scale to 50 vendors. Post-processing hallucinations (D) is unreliable.",
     isAiGenerated: true,
-    source: "https://code.claude.com/docs/en/mcp"
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
   },
   {
     id: 22,
-    scenario: "Customer Support Resolution Agent",
+    scenario: "Developer Productivity with Claude",
     domain: "Tool Design & MCP Integration",
-    text: "When a tool execution fails in the MCP protocol, what are the two distinct error reporting mechanisms?",
+    text: "You're building a coding assistant agent that has access to both a Read tool (reads file contents) and a get_documentation MCP tool (fetches API documentation from your internal docs server). During testing, you notice the agent consistently uses Read to try to find documentation by reading source files instead of using get_documentation, even when users explicitly ask for API docs. Both tools have brief one-line descriptions. What's the most likely cause and the best first fix?",
     choices: [
-      { label: "A", text: "HTTP status codes for network errors and isError: true in tool results for business logic errors." },
-      { label: "B", text: "Protocol errors (standard JSON-RPC errors) for issues like unknown tools, and tool execution errors reported with isError: true for runtime failures." },
-      { label: "C", text: "Synchronous exceptions for immediate failures and webhook callbacks for async failures." },
-      { label: "D", text: "Error codes in the tool response schema and retry headers in the HTTP response." }
+      { label: "A", text: "The agent needs more training data showing correct tool usage patterns." },
+      { label: "B", text: "Tool descriptions are too brief to differentiate them. Expand get_documentation's description to include input formats, example queries, what it returns, and when to use it vs Read. The most common tool selection failures come from inadequate descriptions." },
+      { label: "C", text: "Remove the Read tool so the agent is forced to use get_documentation." },
+      { label: "D", text: "Add a routing layer that detects documentation-related queries and forces get_documentation." }
     ],
     correctAnswer: "B",
-    explanation: "The MCP spec defines two error reporting mechanisms: \"1. Protocol Errors: Standard JSON-RPC errors\" for issues like unknown tools, invalid arguments, and server errors; and \"2. Tool Execution Errors: Reported in tool results with isError: true\" for API failures, invalid input data, and business logic errors. These are architecturally distinct layers.",
+    explanation: "The docs state: \"Tool descriptions are the primary mechanism LLMs use for tool selection; minimal descriptions lead to unreliable selection among similar tools.\" The engineering blog adds: \"Provide extremely detailed descriptions — This is the most important factor\" and \"Aim for at least 3-4 sentences per tool description.\" The exam guide emphasizes this as a high-leverage, low-effort fix before adding infrastructure like routing layers (D).",
     isAiGenerated: true,
-    source: "https://modelcontextprotocol.io/docs/concepts/tools"
+    source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
   },
 
   // Domain 3: Claude Code Configuration & Workflows (5 questions)
@@ -353,15 +353,15 @@ export const questions: Question[] = [
     id: 23,
     scenario: "Code Generation with Claude Code",
     domain: "Claude Code Configuration & Workflows",
-    text: "Your CLAUDE.md file is getting long at 400+ lines and you notice Claude is adhering less consistently to instructions at the bottom. What does the documentation recommend?",
+    text: "Your team has a monorepo with React frontend components, Python API handlers, and Terraform infrastructure code. Each area has distinct conventions: React uses functional components with hooks, Python follows your custom API framework patterns, and Terraform has specific module naming rules. Test files are co-located with source code throughout the repo (e.g., Button.test.tsx next to Button.tsx). You want Claude to automatically apply the right conventions based on what file is being edited, without relying on Claude to infer which section of a long CLAUDE.md applies. What's the most maintainable approach?",
     choices: [
-      { label: "A", text: "Target under 200 lines per CLAUDE.md file — longer files consume more context and reduce adherence." },
-      { label: "B", text: "There is no practical limit; Claude reads the entire file regardless of length." },
-      { label: "C", text: "Move the most important instructions to the bottom since Claude prioritizes the end of context." },
-      { label: "D", text: "Use the --append-system-prompt flag to inject the instructions directly into the system prompt instead." }
+      { label: "A", text: "Create a single comprehensive CLAUDE.md with all conventions organized under clear headers for each area." },
+      { label: "B", text: "Create .claude/rules/ files with YAML frontmatter paths fields (e.g., paths: [\"src/api/**/*.py\"] for API conventions, paths: [\"**/*.test.*\"] for testing conventions) so rules load automatically based on which files Claude is editing." },
+      { label: "C", text: "Place a separate CLAUDE.md in each subdirectory with that area's conventions." },
+      { label: "D", text: "Create custom skills for each code type that developers invoke manually before working in each area." }
     ],
-    correctAnswer: "A",
-    explanation: "The docs explicitly recommend: \"Size: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence.\" For larger projects, the solution is modular organization: split into .claude/rules/ files with path-specific scoping, or use @import to reference external files.",
+    correctAnswer: "B",
+    explanation: "The docs state: \".claude/rules/ files with YAML frontmatter paths fields\" enable \"conditional rule activation\" where \"path-scoped rules trigger when Claude reads files matching the pattern.\" This handles co-located test files (paths: [\"**/*.test.*\"]) that span all directories — something subdirectory CLAUDE.md files (C) can't do since they're directory-bound. A single CLAUDE.md (A) relies on inference. Manual skills (D) contradicts the \"automatic\" requirement. The docs recommend targeting \"under 200 lines per CLAUDE.md file.\"",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/memory"
   },
@@ -369,15 +369,15 @@ export const questions: Question[] = [
     id: 24,
     scenario: "Code Generation with Claude Code",
     domain: "Claude Code Configuration & Workflows",
-    text: "You want to create a skill that runs in complete isolation from the main conversation — it shouldn't see the conversation history and its verbose output shouldn't pollute the main context. Which frontmatter option achieves this?",
+    text: "You're building a /security-audit skill for your team that performs a comprehensive codebase security scan. The skill produces verbose output (hundreds of lines of findings) and you don't want it to consume the main conversation's context window. It also shouldn't have permission to edit files — only read and search. How should you configure the SKILL.md frontmatter?",
     choices: [
-      { label: "A", text: "Set allowed-tools to an empty array to prevent the skill from accessing any tools." },
-      { label: "B", text: "Set context: fork to run the skill in a forked subagent context." },
-      { label: "C", text: "Set disable-model-invocation: true to prevent Claude from loading the skill." },
-      { label: "D", text: "Set user-invocable: false to hide it from the conversation." }
+      { label: "A", text: "Set context: fork to isolate it in a subagent, and set allowed-tools to restrict it to Read, Glob, and Grep only." },
+      { label: "B", text: "Set disable-model-invocation: true to prevent context pollution." },
+      { label: "C", text: "Set user-invocable: false so it only runs when explicitly triggered." },
+      { label: "D", text: "Don't use a skill — put the instructions in CLAUDE.md instead." }
     ],
-    correctAnswer: "B",
-    explanation: "The docs state: \"Add context: fork to your frontmatter when you want a skill to run in isolation. The skill content becomes the prompt that drives the subagent. It won't have access to your conversation history.\" The docs also warn: \"context: fork only makes sense for skills with explicit instructions. If your skill contains guidelines without a task, the subagent receives the guidelines but no actionable prompt, and returns without meaningful output.\"",
+    correctAnswer: "A",
+    explanation: "The docs state: \"Add context: fork to run in isolation. The skill content becomes the prompt that drives the subagent. It won't have access to your conversation history.\" Combined with \"allowed-tools: Tools Claude can use without asking permission when this skill is active\" restricted to read-only tools. This solves both problems: isolation prevents context pollution, and allowed-tools prevents file modifications. disable-model-invocation (B) prevents Claude from auto-loading the skill, not context isolation.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/skills"
   },
@@ -385,15 +385,15 @@ export const questions: Question[] = [
     id: 25,
     scenario: "Claude Code for Continuous Integration",
     domain: "Claude Code Configuration & Workflows",
-    text: "Your CI pipeline needs Claude Code to output machine-parseable JSON matching a specific schema for automated posting as PR comments. Which flags should you use?",
+    text: "Your CI pipeline runs Claude Code to review PRs and post findings as inline comments. The pipeline needs to: (1) run non-interactively, (2) output structured JSON matching your comment schema, and (3) limit spending to $2 per review. A junior engineer wrote the pipeline command as: claude \"Review this PR for bugs\" --output-format json. The job hangs indefinitely. What's wrong and what's the correct command?",
     choices: [
-      { label: "A", text: "claude -p --output-format json --json-schema '{...}' \"review this PR\"" },
-      { label: "B", text: "claude --output-format json \"review this PR\"" },
-      { label: "C", text: "claude -p --json \"review this PR\"" },
-      { label: "D", text: "claude --batch --schema '{...}' \"review this PR\"" }
+      { label: "A", text: "Add the -p flag for non-interactive mode, add --json-schema for schema validation, and add --max-budget-usd 2. The -p flag is required — without it, Claude Code waits for interactive input." },
+      { label: "B", text: "Set the CLAUDE_HEADLESS=true environment variable and add a timeout." },
+      { label: "C", text: "Pipe the prompt through stdin: echo \"Review this PR\" | claude --output-format json" },
+      { label: "D", text: "Add the --batch flag to run in non-interactive mode." }
     ],
     correctAnswer: "A",
-    explanation: "The docs specify: \"-p\" for \"Print response without interactive mode\", \"--output-format\" with options \"text, json, stream-json\", and \"--json-schema\" to \"Get validated JSON output matching a JSON Schema after agent completes its workflow (print mode only)\". Both --output-format and --json-schema require -p (print mode). Options C and D reference flags that don't exist.",
+    explanation: "The docs state: \"-p (or --print) flag\" is for \"Print response without interactive mode.\" Without -p, Claude Code enters interactive mode and waits for input — explaining the hang. --json-schema provides \"validated JSON output matching a JSON Schema (print mode only)\" and --max-budget-usd sets a \"Maximum dollar amount to spend on API calls before stopping (print mode only).\" CLAUDE_HEADLESS (B) and --batch (D) are non-existent features.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/cli-reference"
   },
@@ -401,15 +401,15 @@ export const questions: Question[] = [
     id: 26,
     scenario: "Code Generation with Claude Code",
     domain: "Claude Code Configuration & Workflows",
-    text: "In Claude Code's settings system, what happens when the same array-valued setting (like permissions.allow) appears in both user settings and project settings?",
+    text: "A new team member reports that Claude Code isn't following the testing conventions documented in .claude/settings.json. Other team members have no issues. You investigate and find the new member has a personal ~/.claude/settings.json with a permissions.deny rule that blocks the test runner. The project settings have permissions.allow for the same test runner. Which setting wins, and why?",
     choices: [
-      { label: "A", text: "Project settings completely replace user settings for that key." },
-      { label: "B", text: "User settings take precedence since they are more specific to the individual." },
-      { label: "C", text: "The arrays are concatenated and deduplicated, not replaced." },
-      { label: "D", text: "An error is thrown due to the configuration conflict." }
+      { label: "A", text: "The project allow rule wins because project settings override user settings." },
+      { label: "B", text: "The user deny rule wins because deny rules are always evaluated first regardless of scope, and permission rules follow deny -> ask -> allow order." },
+      { label: "C", text: "They cancel each other out, so Claude prompts for permission each time." },
+      { label: "D", text: "The arrays merge and deduplicate, effectively creating both an allow and deny for the same tool, which is an error." }
     ],
-    correctAnswer: "C",
-    explanation: "The docs state: \"Array settings merge across scopes. When the same array-valued setting (such as sandbox.filesystem.allowWrite or permissions.allow) appears in multiple scopes, the arrays are concatenated and deduplicated, not replaced.\" This is distinct from scalar settings where the higher-priority scope wins.",
+    correctAnswer: "B",
+    explanation: "The docs state: \"Rules are evaluated in order: deny rules first, then ask, then allow. The first matching rule wins, so deny rules always take precedence.\" Additionally, \"Array settings merge across scopes — the arrays are concatenated and deduplicated, not replaced.\" So both rules exist in the merged set, but deny is evaluated first. The fix is removing the deny rule from the user's personal settings.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/settings"
   },
@@ -417,15 +417,15 @@ export const questions: Question[] = [
     id: 27,
     scenario: "Code Generation with Claude Code",
     domain: "Claude Code Configuration & Workflows",
-    text: "You have CLAUDE.md files at multiple levels: ~/.claude/CLAUDE.md, ./CLAUDE.md, and ./src/components/CLAUDE.md. When does the subdirectory CLAUDE.md get loaded?",
+    text: "Your project's CLAUDE.md has grown to 350 lines covering coding standards, API conventions, testing patterns, deployment procedures, and architecture decisions. You notice Claude is inconsistently following instructions — especially those in the middle of the file. Your team also maintains a shared coding standards document at docs/coding-standards.md. How should you restructure?",
     choices: [
-      { label: "A", text: "All CLAUDE.md files are loaded at session start regardless of location." },
-      { label: "B", text: "CLAUDE.md files above and at the working directory load at launch; subdirectory CLAUDE.md files load on demand when Claude reads files in those subdirectories." },
-      { label: "C", text: "Only the root CLAUDE.md is loaded; subdirectory files are ignored." },
-      { label: "D", text: "Subdirectory CLAUDE.md files override the root CLAUDE.md when working in that directory." }
+      { label: "A", text: "Split into focused .claude/rules/ files for each topic (testing.md, api-conventions.md, deployment.md) and use @import in CLAUDE.md to reference docs/coding-standards.md. Keep CLAUDE.md under 200 lines with only high-level project context." },
+      { label: "B", text: "Move everything into the system prompt using --append-system-prompt-file for better adherence." },
+      { label: "C", text: "Duplicate the coding standards content directly into CLAUDE.md for faster access." },
+      { label: "D", text: "Keep the single CLAUDE.md but reorder it to put the most important instructions at the beginning and end." }
     ],
-    correctAnswer: "B",
-    explanation: "The docs state: \"CLAUDE.md files in the directory hierarchy above the working directory are loaded in full at launch. CLAUDE.md files in subdirectories load on demand when Claude reads files in those directories.\" This means ~/.claude/CLAUDE.md and ./CLAUDE.md load immediately, but ./src/components/CLAUDE.md only loads when Claude accesses files in that directory.",
+    correctAnswer: "A",
+    explanation: "The docs recommend: \"target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence.\" The solution uses .claude/rules/ for \"organizing instructions into multiple files\" and @import syntax: \"CLAUDE.md files can import additional files using @path/to/import syntax. Imported files are expanded and loaded into context at launch.\" This keeps CLAUDE.md concise while maintaining all conventions in modular, maintainable files.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/memory"
   },
@@ -436,15 +436,15 @@ export const questions: Question[] = [
     id: 28,
     scenario: "Structured Data Extraction",
     domain: "Prompt Engineering & Structured Output",
-    text: "You are using tool_choice set to \"any\" to force structured output. You also want Claude to explain its reasoning in natural language before making the tool call. Is this possible?",
+    text: "You're building an invoice extraction system using tool_use with a JSON schema. During testing, you find that Claude correctly extracts all fields with valid types (no syntax errors), but sometimes puts the vendor's address in the \"billing_address\" field and the billing address in the \"vendor_address\" field. Adding strict: true to the tool definition doesn't fix this. Why not, and what should you do?",
     choices: [
-      { label: "A", text: "Yes, just add \"explain your reasoning before calling the tool\" to the system prompt." },
-      { label: "B", text: "No — when tool_choice is \"any\" or \"tool\", the API prefills the assistant message to force a tool call, meaning the model will not emit natural language before tool_use blocks, even if explicitly asked." },
-      { label: "C", text: "Yes, if you enable extended thinking alongside tool_choice \"any\"." },
-      { label: "D", text: "Yes, by setting disable_parallel_tool_use to true." }
+      { label: "A", text: "strict: true is broken — file a bug report with Anthropic." },
+      { label: "B", text: "strict: true eliminates syntax/type errors but not semantic errors like values in wrong fields. Add few-shot examples showing correct field placement for ambiguous cases, and consider adding field-level descriptions that clearly distinguish vendor_address from billing_address." },
+      { label: "C", text: "Switch from tool_use to asking Claude to output raw JSON text, which gives it more flexibility." },
+      { label: "D", text: "Add a post-processing validator that swaps the fields using heuristics." }
     ],
     correctAnswer: "B",
-    explanation: "The docs explicitly state: \"When you have tool_choice as any or tool, the API prefills the assistant message to force a tool to be used. This means that the models will not emit a natural language response or explanation before tool_use content blocks, even if explicitly asked to do so.\" Option C is also wrong: extended thinking is NOT compatible with tool_choice \"any\" or \"tool\" and \"will result in an error.\"",
+    explanation: "The exam guide explicitly covers this distinction: \"strict JSON schemas via tool use eliminate syntax errors but do not prevent semantic errors (e.g., line items that don't sum to total, values in wrong fields).\" Few-shot examples are \"the most effective technique for achieving consistently formatted, actionable output\" and work by showing correct handling of ambiguous cases. Raw JSON (C) would reintroduce syntax errors. Heuristic swapping (D) is brittle.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview"
   },
@@ -452,15 +452,15 @@ export const questions: Question[] = [
     id: 29,
     scenario: "Claude Code for Continuous Integration",
     domain: "Prompt Engineering & Structured Output",
-    text: "You're designing prompts for a code review system and want consistent output quality. The Anthropic docs recommend a specific technique for achieving consistently formatted, actionable output when detailed instructions alone produce inconsistent results. What is it?",
+    text: "Your automated code review system flags potential issues in PRs. After deploying it, developers complain that 60% of flagged issues are false positives — minor style preferences, acceptable patterns flagged as problems, and nitpicks about documentation. The team is losing trust in the system and starting to ignore all findings, including real bugs. Your system prompt says \"review for quality issues, be conservative.\" What's the most effective fix?",
     choices: [
-      { label: "A", text: "Increase the temperature to allow more creative responses." },
-      { label: "B", text: "Use 3-5 few-shot examples wrapped in <example> tags, making them relevant, diverse, and structured." },
-      { label: "C", text: "Use a larger model with more parameters." },
-      { label: "D", text: "Add the instruction \"be consistent\" to the system prompt." }
+      { label: "A", text: "Switch to a more capable model that produces fewer false positives." },
+      { label: "B", text: "Replace the vague \"be conservative\" instruction with explicit category-based criteria defining exactly which issues to report (bugs, security) versus skip (style, local patterns), with few-shot examples showing the boundary for each severity level." },
+      { label: "C", text: "Add a confidence score and only show findings above 90% confidence." },
+      { label: "D", text: "Reduce the number of files reviewed per pass to improve focus." }
     ],
     correctAnswer: "B",
-    explanation: "The docs state: \"Examples are one of the most reliable ways to steer Claude's output format, tone, and structure. A few well-crafted examples (known as few-shot or multishot prompting) can dramatically improve accuracy and consistency.\" They recommend: \"Include 3-5 examples for best results\" and making them \"Relevant: Mirror your actual use case closely. Diverse: Cover edge cases. Structured: Wrap examples in <example> tags.\"",
+    explanation: "The exam guide directly addresses this: \"general instructions like 'be conservative' or 'only report high-confidence findings' fail to improve precision compared to specific categorical criteria.\" The fix is writing \"specific review criteria that define which issues to report (bugs, security) versus skip (minor style, local patterns)\" with \"concrete code examples for each severity level.\" The exam guide also notes: \"high false positive rates on specific categories undermine confidence in accurate categories\" — matching the trust erosion described.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
   },
@@ -468,15 +468,15 @@ export const questions: Question[] = [
     id: 30,
     scenario: "Structured Data Extraction",
     domain: "Prompt Engineering & Structured Output",
-    text: "Your batch processing job submitted 10,000 documents via the Message Batches API. The results come back, but they're not in the same order as your requests. How do you match results to their original requests?",
+    text: "Your company processes 10,000 vendor invoices weekly. Currently, each invoice extraction is a real-time API call costing $0.05/invoice ($500/week). Your manager wants to move everything to the Message Batches API for the 50% cost savings. However, 200 of those weekly invoices are flagged as urgent and need extraction within 10 minutes for same-day payment processing. How should you architect this?",
     choices: [
-      { label: "A", text: "Results are always returned in submission order — check your parsing logic." },
-      { label: "B", text: "Use the custom_id field on each request to correlate batch request/response pairs." },
-      { label: "C", text: "Use the array index since batch results maintain positional correspondence." },
-      { label: "D", text: "Parse the content of each result to infer which document it corresponds to." }
+      { label: "A", text: "Move all 10,000 invoices to batch processing — most batches finish within an hour, which is fast enough for urgent invoices too." },
+      { label: "B", text: "Keep all invoices on real-time processing — the cost savings aren't worth the complexity." },
+      { label: "C", text: "Use batch processing for the 9,800 non-urgent invoices and keep real-time API calls for the 200 urgent ones. Match each API to its latency requirements." },
+      { label: "D", text: "Use batch processing for everything with a fallback to real-time if any invoice hasn't completed within 30 minutes." }
     ],
-    correctAnswer: "B",
-    explanation: "The docs state: \"Batch results can be returned in any order, and may not match the ordering of requests when the batch was created... To correctly match results with their corresponding requests, always use the custom_id field.\" Each request requires a unique custom_id specifically for this purpose.",
+    correctAnswer: "C",
+    explanation: "The docs state: \"The Message Batches API has processing times up to 24 hours with no guaranteed latency SLA\" making it unsuitable for the urgent invoices that need 10-minute turnaround. But it's \"well-suited to tasks that do not require immediate responses\" for the 9,800 non-urgent ones. This saves $245/week (50% of 9,800 invoices) while meeting the latency requirement. Option A risks delayed urgent payments. Option D adds unreliable complexity.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/build-with-claude/batch-processing"
   },
@@ -484,15 +484,15 @@ export const questions: Question[] = [
     id: 31,
     scenario: "Structured Data Extraction",
     domain: "Prompt Engineering & Structured Output",
-    text: "You have a long document analysis prompt with the document content and your query. Where should you place each component for optimal response quality?",
+    text: "Your extraction pipeline processes medical research papers to extract study metadata (sample size, methodology, key findings). Papers vary wildly in structure: some use inline citations, others have bibliographies; some describe methodology in dedicated sections, others embed it in the narrative. Your prompt instructions describe the desired output format in detail, but extraction quality is inconsistent — especially for methodology extraction, where Claude sometimes fabricates details not present in the paper. What's the most effective improvement?",
     choices: [
-      { label: "A", text: "Put the query first, then the document — Claude prioritizes content it sees first." },
-      { label: "B", text: "Interleave the query throughout the document at regular intervals." },
-      { label: "C", text: "Put the long document at the top and your query at the end — this can improve response quality by up to 30%." },
-      { label: "D", text: "It doesn't matter — Claude processes all positions equally." }
+      { label: "A", text: "Add a validation step that cross-references extracted methodology against the source paper using a second API call." },
+      { label: "B", text: "Add 3-5 few-shot examples showing correct extraction from documents with varied structures (inline citations vs bibliographies, dedicated sections vs embedded descriptions), including examples where fields are correctly set to null when information isn't present." },
+      { label: "C", text: "Increase the max_tokens limit to give Claude more room to extract thoroughly." },
+      { label: "D", text: "Fine-tune a custom model on your specific paper format." }
     ],
-    correctAnswer: "C",
-    explanation: "The docs state: \"Put longform data at the top: Place your long documents and inputs near the top of your prompt, above your query, instructions, and examples.\" and \"Queries at the end can improve response quality by up to 30% in tests, especially with complex, multi-document inputs.\"",
+    correctAnswer: "B",
+    explanation: "The docs state: \"few-shot examples are the most effective technique for achieving consistently formatted, actionable output when detailed instructions alone produce inconsistent results.\" The exam guide emphasizes showing \"correct handling of varied document structures (inline citations vs bibliographies, methodology sections vs embedded details)\" and \"few-shot examples showing correct extraction from documents with varied formats to address empty/null extraction of required fields.\" This directly addresses both inconsistency and hallucination.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
   },
@@ -500,66 +500,66 @@ export const questions: Question[] = [
     id: 32,
     scenario: "Claude Code for Continuous Integration",
     domain: "Prompt Engineering & Structured Output",
-    text: "Which of the following workloads is NOT appropriate for the Message Batches API?",
+    text: "Your CI pipeline uses Claude Code to generate code reviews. After a commit is pushed, Claude reviews the PR and posts findings. When the developer pushes a fix addressing some findings, the review runs again and reposts the same findings that were already fixed — plus new duplicates of findings from the original review that the developer chose not to address. Developers are frustrated by the noise. How should you redesign the review workflow?",
     choices: [
-      { label: "A", text: "Overnight technical debt reports generated for morning review." },
-      { label: "B", text: "Weekly compliance audits across all repositories." },
-      { label: "C", text: "A blocking pre-merge check that must complete before developers can merge." },
-      { label: "D", text: "Nightly test generation for newly added functions." }
+      { label: "A", text: "Add a deduplication step that compares new findings against a database of previous findings." },
+      { label: "B", text: "Include prior review findings in the context when re-running reviews after new commits, instructing Claude to report only new or still-unaddressed issues and avoid duplicate comments." },
+      { label: "C", text: "Only run reviews on the initial PR submission, not on subsequent commits." },
+      { label: "D", text: "Have Claude assign unique IDs to each finding so duplicates can be filtered client-side." }
     ],
-    correctAnswer: "C",
-    explanation: "The Message Batches API \"offers 50% cost savings but has processing times up to 24 hours with no guaranteed latency SLA.\" This makes it unsuitable for blocking workflows. The docs note it is \"well-suited to tasks that do not require immediate responses, with most batches finishing in less than 1 hour.\" Pre-merge checks (C) are blocking — developers wait for results — making the synchronous API the correct choice.",
+    correctAnswer: "B",
+    explanation: "The exam guide directly addresses this pattern under CI/CD integration: \"Including prior review findings in context when re-running reviews after new commits, instructing Claude to report only new or still-unaddressed issues to avoid duplicate comments.\" This uses context management to solve the problem at the prompt level rather than requiring external infrastructure (A, D). Skipping re-reviews (C) means newly introduced bugs in the fix would go undetected.",
     isAiGenerated: true,
-    source: "https://docs.anthropic.com/en/docs/build-with-claude/batch-processing"
+    source: "https://code.claude.com/docs/en/cli-reference"
   },
 
   // Domain 5: Context Management & Reliability (5 questions)
 
   {
     id: 33,
-    scenario: "Multi-Agent Research System",
+    scenario: "Developer Productivity with Claude",
     domain: "Context Management & Reliability",
-    text: "During extended codebase exploration, your Claude Code session's context window is approaching its limit. What happens automatically, and what is the key risk?",
+    text: "You're using Claude Code for a multi-phase task: first exploring a large legacy codebase to understand its architecture, then planning a migration strategy, then implementing changes. During the exploration phase, the context fills with verbose file contents and search results. By the time you reach implementation, Claude's responses become vague and it \"forgets\" specific architectural details discovered during exploration. What's the best approach?",
     choices: [
-      { label: "A", text: "The session crashes with an out-of-context error and must be restarted." },
-      { label: "B", text: "The SDK automatically compacts the conversation by summarizing older history, but specific instructions from early in the conversation may not be preserved." },
-      { label: "C", text: "Claude automatically switches to a smaller, faster model to conserve tokens." },
-      { label: "D", text: "The session continues normally — there is no context limit with Claude Code." }
+      { label: "A", text: "Use an Explore subagent for the verbose discovery phase — it runs in its own context window, returning only a summary to the main session. Then proceed with planning and implementation in the main session with a clean context." },
+      { label: "B", text: "Start with a larger context window model for the exploration phase." },
+      { label: "C", text: "Use /compact frequently during exploration to free up space." },
+      { label: "D", text: "Copy all discovered details into a text file and tell Claude to read it when needed." }
     ],
-    correctAnswer: "B",
-    explanation: "The docs state: \"When the context window approaches its limit, the SDK automatically compacts the conversation: it summarizes older history to free space, keeping your most recent exchanges and key decisions intact.\" The key risk: \"Compaction replaces older messages with a summary, so specific instructions from early in the conversation may not be preserved. Persistent rules belong in CLAUDE.md rather than in the initial prompt.\"",
+    correctAnswer: "A",
+    explanation: "The docs describe the Explore subagent as \"a fast, read-only agent optimized for searching and analyzing codebases\" that runs in its own context window. The exam guide recommends \"using the Explore subagent for isolating verbose discovery output and returning summaries to preserve main conversation context\" and \"spawning subagents to investigate specific questions while the main agent preserves high-level coordination.\" Frequent compaction (C) risks losing important details from earlier exploration.",
     isAiGenerated: true,
-    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
+    source: "https://code.claude.com/docs/en/sub-agents"
   },
   {
     id: 34,
     scenario: "Customer Support Resolution Agent",
     domain: "Context Management & Reliability",
-    text: "Your customer support agent handles multi-issue sessions where customers raise several problems across a long conversation. As the conversation grows, the agent starts giving vague responses referencing \"typical patterns\" instead of the specific order numbers and dates discussed earlier. What is this phenomenon and how should you address it?",
+    text: "Your agent handles multi-issue support sessions that often last 20+ turns. Customers frequently reference earlier details: \"what about that order I mentioned earlier?\" or \"go back to the refund we discussed.\" After context compaction, the agent sometimes loses specific order numbers and amounts from early in the conversation, giving vague responses like \"your previous order\" instead of citing order #48291. How should you architect the context to preserve these critical details?",
     choices: [
-      { label: "A", text: "This is the \"lost in the middle\" effect — extract transactional facts into a persistent \"case facts\" block included in each prompt, outside of summarized history." },
-      { label: "B", text: "Increase max_tokens to give the model more room to process the full conversation." },
-      { label: "C", text: "Switch to a model with a larger context window." },
-      { label: "D", text: "Add a system prompt instruction telling the model to always reference specific details." }
+      { label: "A", text: "Disable context compaction to preserve the full conversation history." },
+      { label: "B", text: "Extract transactional facts (order IDs, amounts, dates, statuses) into a structured \"case facts\" block that persists outside summarized history and is included in every prompt." },
+      { label: "C", text: "Store conversation history in an external database and retrieve relevant parts when needed." },
+      { label: "D", text: "Limit conversations to 10 turns and start new sessions after that." }
     ],
-    correctAnswer: "A",
-    explanation: "The exam guide describes this exact pattern under context management: models reliably process information at the beginning and end of long inputs but may omit findings from middle sections. The solution is extracting transactional facts (amounts, dates, order numbers, statuses) into a persistent \"case facts\" block included in each prompt, outside summarized history. A larger context window (C) doesn't fix attention distribution issues.",
+    correctAnswer: "B",
+    explanation: "The exam guide specifically describes extracting \"transactional facts (amounts, dates, order numbers, statuses) into a persistent 'case facts' block included in each prompt, outside summarized history.\" This survives compaction because it's a structured data layer separate from conversation history. Disabling compaction (A) would eventually hit context limits. External databases (C) add unnecessary infrastructure complexity for this use case.",
     isAiGenerated: true,
-    source: "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices"
+    source: "https://platform.claude.com/docs/en/agent-sdk/agent-loop"
   },
   {
     id: 35,
     scenario: "Multi-Agent Research System",
     domain: "Context Management & Reliability",
-    text: "Your synthesis subagent receives findings from multiple research subagents, but after progressive summarization across agents, source attribution has been lost. You can no longer trace which claims came from which sources. What structural change prevents this?",
+    text: "Your research pipeline has three subagents: web search, document analysis, and synthesis. The web search agent finds an article stating \"AI adoption grew 45% in 2025\" and another stating \"AI adoption increased 32% in 2025.\" The document analysis agent passes both findings to synthesis. The synthesis agent arbitrarily picks \"45%\" for the final report without noting the discrepancy. How should you fix this?",
     choices: [
-      { label: "A", text: "Have each subagent include structured claim-source mappings (source URLs, document names, relevant excerpts) that downstream agents must preserve through synthesis." },
-      { label: "B", text: "Have the synthesis agent search the web again to re-verify all claims." },
-      { label: "C", text: "Add a post-processing step that uses a classifier to guess source attribution." },
-      { label: "D", text: "Limit the research to a single subagent to avoid cross-agent attribution loss." }
+      { label: "A", text: "Have the synthesis agent always pick the more conservative number." },
+      { label: "B", text: "Require subagents to include structured claim-source mappings with publication dates. Instruct the synthesis agent to annotate conflicts with source attribution rather than arbitrarily selecting one value, and structure reports to distinguish well-established findings from contested ones." },
+      { label: "C", text: "Add a fact-checking subagent that resolves all discrepancies before synthesis." },
+      { label: "D", text: "Have the coordinator filter out contradictory findings before passing them to synthesis." }
     ],
-    correctAnswer: "A",
-    explanation: "The exam guide specifically addresses information provenance: source attribution is lost during summarization steps when findings are compressed without preserving claim-source mappings. The solution is requiring subagents to output structured claim-source mappings that the synthesis agent must preserve and merge when combining findings. Re-searching (B) wastes resources and may find different results.",
+    correctAnswer: "B",
+    explanation: "The exam guide addresses information provenance directly: \"handle conflicting statistics from credible sources by annotating conflicts with source attribution rather than arbitrarily selecting one value\" and \"requiring publication/collection dates in structured outputs to prevent temporal differences from being misinterpreted as contradictions.\" The synthesis output should \"distinguish well-established findings from contested ones, preserving original source characterizations.\" Filtering contradictions (D) loses important information.",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/agents"
   },
@@ -567,15 +567,15 @@ export const questions: Question[] = [
     id: 36,
     scenario: "Developer Productivity with Claude",
     domain: "Context Management & Reliability",
-    text: "After compacting a Claude Code session with /compact, what happens to the CLAUDE.md instructions?",
+    text: "You're using Claude Code across multiple sessions for a week-long migration project. You put detailed migration rules in the initial prompt of each session, but after compaction occurs mid-session, Claude stops following some of those rules. A colleague suggests putting the rules in CLAUDE.md instead. Is this the right fix, and why?",
     choices: [
-      { label: "A", text: "CLAUDE.md content is summarized along with the rest of the conversation." },
-      { label: "B", text: "CLAUDE.md fully survives compaction — Claude re-reads it from disk and re-injects it fresh into the session." },
-      { label: "C", text: "CLAUDE.md is dropped entirely and must be manually re-imported." },
-      { label: "D", text: "Only the first 50 lines of CLAUDE.md survive compaction." }
+      { label: "A", text: "No — CLAUDE.md is only for project documentation, not operational rules." },
+      { label: "B", text: "Yes — CLAUDE.md fully survives compaction because Claude re-reads it from disk and re-injects it fresh after /compact. Prompt content gets summarized during compaction and specific instructions may be lost." },
+      { label: "C", text: "No — both CLAUDE.md and prompt instructions are treated the same during compaction." },
+      { label: "D", text: "Yes, but only if the CLAUDE.md is under 50 lines." }
     ],
     correctAnswer: "B",
-    explanation: "The docs explicitly state: \"CLAUDE.md fully survives compaction. After /compact, Claude re-reads your CLAUDE.md from disk and re-injects it fresh into the session.\" This is why persistent rules belong in CLAUDE.md rather than in conversation prompts — CLAUDE.md survives compaction while conversation content gets summarized.",
+    explanation: "The docs state: \"CLAUDE.md fully survives compaction. After /compact, Claude re-reads your CLAUDE.md from disk and re-injects it fresh into the session.\" In contrast: \"Compaction replaces older messages with a summary, so specific instructions from early in the conversation may not be preserved. Persistent rules belong in CLAUDE.md rather than in the initial prompt.\" This is the exact scenario described — migration rules should be in CLAUDE.md for compaction resilience.",
     isAiGenerated: true,
     source: "https://code.claude.com/docs/en/memory"
   },
@@ -583,15 +583,15 @@ export const questions: Question[] = [
     id: 37,
     scenario: "Multi-Agent Research System",
     domain: "Context Management & Reliability",
-    text: "A subagent silently returns an empty result set after failing to access a database. The coordinator treats this as \"no results found\" and continues, producing an incomplete report with no indication of the gap. What anti-pattern is this, and what's the fix?",
+    text: "Your web search subagent times out while researching market data for a financial report. The subagent catches the timeout and returns an empty result set marked as successful (no error flag). The coordinator continues, and the synthesis agent produces a report with a section on market trends that contains only generic statements with no specific data. The report goes to stakeholders who don't realize the market data section is based on nothing. What's the correct error handling pattern?",
     choices: [
-      { label: "A", text: "This is expected behavior — empty results are a valid response. No fix needed." },
-      { label: "B", text: "This is the error suppression anti-pattern. The subagent should return structured error context (failure type, what was attempted, partial results) so the coordinator can make informed recovery decisions." },
-      { label: "C", text: "The coordinator should always run each subagent twice to verify results." },
-      { label: "D", text: "Add a timeout that terminates the entire workflow if any subagent returns empty results." }
+      { label: "A", text: "Add a minimum result count check in the coordinator — if any subagent returns fewer than 5 results, re-run it." },
+      { label: "B", text: "The subagent should return structured error context (failure type, attempted query, partial results, alternatives) with an error flag, so the coordinator can decide whether to retry, use alternative sources, or annotate the final report with coverage gaps." },
+      { label: "C", text: "Add a timeout extension so the subagent has more time to complete." },
+      { label: "D", text: "Have the synthesis agent detect when it lacks sufficient data and refuse to generate that section." }
     ],
     correctAnswer: "B",
-    explanation: "The exam guide explicitly calls out this anti-pattern: silently suppressing errors (returning empty results as success) or terminating entire workflows on single failures are both anti-patterns. The correct approach is returning structured error context including failure type, attempted query, partial results, and potential alternatives, enabling intelligent coordinator recovery decisions. The coordinator must be able to distinguish access failures from valid empty results.",
+    explanation: "The exam guide explicitly identifies this anti-pattern: \"silently suppressing errors (returning empty results as success) or terminating entire workflows on single failures are both anti-patterns.\" The correct pattern returns \"structured error context including failure type, attempted query, partial results, and potential alternatives\" so the coordinator can make intelligent recovery decisions. The coordinator must be able to \"distinguish access failures (needing retry decisions) from valid empty results (representing successful queries with no matches).\"",
     isAiGenerated: true,
     source: "https://docs.anthropic.com/en/docs/agents"
   }
