@@ -80,7 +80,15 @@ export default function Home() {
   const [quizKey, setQuizKey] = useState(0);
 
   const shuffledQuestions: ShuffledQuestion[] = useMemo(() => {
-    return shuffle(questions).map((q) => {
+    const QUESTIONS_PER_RUN = 12;
+    const examQuestions = questions.filter((q) => !q.isAiGenerated);
+    const aiQuestions = questions.filter((q) => q.isAiGenerated);
+    const half = Math.floor(QUESTIONS_PER_RUN / 2);
+    const selected = [
+      ...shuffle(examQuestions).slice(0, half),
+      ...shuffle(aiQuestions).slice(0, half),
+    ];
+    return shuffle(selected).map((q) => {
       const shuffledChoices = shuffle(q.choices).map((c, i) => ({
         label: String.fromCharCode(65 + i),
         text: c.text,
@@ -126,9 +134,11 @@ export default function Home() {
     }).length;
   }, [answers, shuffledQuestions]);
 
+  const quizLength = shuffledQuestions.length || 12;
+
   const scaledScore = useMemo(
-    () => calculateScaledScore(correctCount, questions.length),
-    [correctCount]
+    () => calculateScaledScore(correctCount, quizLength),
+    [correctCount, quizLength]
   );
 
   if (phase === "start") {
@@ -157,8 +167,9 @@ export default function Home() {
               Foundations Certification Practice Test
             </p>
             <p className="text-text-muted font-sans text-sm leading-relaxed mb-10 max-w-lg mx-auto">
-              {questions.length} scenario-based multiple choice questions across
-              5 domains. Scored 100&ndash;1,000 with a passing score of 720.
+              12 questions per run drawn from a pool of {questions.length} &mdash;
+              half from the official exam guide, half AI-generated from the docs.
+              Scored 100&ndash;1,000 with a passing score of 720.
               Questions and answer choices are randomized each attempt.
             </p>
 
@@ -281,14 +292,14 @@ export default function Home() {
               <div className="flex justify-between items-center mb-4">
                 <span className="text-text-secondary text-sm">Correct</span>
                 <span className="text-foreground font-mono">
-                  {correctCount}/{questions.length}
+                  {correctCount}/{quizLength}
                 </span>
               </div>
               <div className="w-full bg-surface-alt rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
-                    width: `${(correctCount / questions.length) * 100}%`,
+                    width: `${(correctCount / quizLength) * 100}%`,
                     background: passed
                       ? "var(--accent-green)"
                       : "var(--accent-red)",
@@ -298,7 +309,7 @@ export default function Home() {
               <div className="flex justify-between mt-2">
                 <span className="text-text-muted text-xs">0%</span>
                 <span className="text-text-muted text-xs">
-                  {Math.round((correctCount / questions.length) * 100)}%
+                  {Math.round((correctCount / quizLength) * 100)}%
                 </span>
                 <span className="text-text-muted text-xs">100%</span>
               </div>
